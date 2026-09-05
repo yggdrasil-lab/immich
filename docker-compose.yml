@@ -1,0 +1,136 @@
+# Immich — self-hosted photo & video backup
+# Deployed via Docker Swarm on the Muspelheim worker node.
+# Docs: https://immich.app/docs/install/docker-compose
+
+networks:
+  aether-net:
+    external: true
+  internal:
+    driver: overlay
+    attachable: true
+
+secrets:
+  immich_db_password:
+    external: true
+    name: ${IMMICH_DB_PASSWORD_NAME}
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    networks:
+      - aether-net
+      - internal
+    environment:
+      - TZ=Pacific/Auckland
+      - DB_HOSTNAME=database
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD_FILE=/run/secrets/immich_db_password
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=redis
+    secrets:
+      - immich_db_password
+    volumes:
+      - /mnt/storage/immich/library:/data
+    healthcheck:
+      test: ["CMD", "immich-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == muspelheim
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 15
+        window: 120s
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.immich.rule=Host(`photos.${DOMAIN_NAME}`)
+        - traefik.http.routers.immich.entrypoints=websecure
+        - traefik.http.routers.immich.tls=true
+        - traefik.http.services.immich.loadbalancer.server.port=2283
+        - traefik.docker.network=aether-net
+        - homepage.group=Media
+        - homepage.name=Immich
+        - homepage.icon=immich
+        - homepage.href=https://photos.${DOMAIN_NAME}
+        - homepage.description=Photo & video backup
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    networks:
+      - internal
+    environment:
+      - TZ=Pacific/Auckland
+    volumes:
+      - /opt/immich/model-cache:/cache
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == muspelheim
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 15
+        window: 120s
+
+  redis:
+    image: docker.io/valkey/valkey:9
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == muspelheim
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 15
+        window: 120s
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    networks:
+      - internal
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/immich_db_password
+      - POSTGRES_DB=immich
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    secrets:
+      - immich_db_password
+    volumes:
+      - /opt/immich/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d immich"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == muspelheim
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 15
+        window: 120s

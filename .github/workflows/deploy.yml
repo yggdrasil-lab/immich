@@ -1,0 +1,29 @@
+name: Immich Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, gaia]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Secrets
+        env:
+          IMMICH_DB_PASSWORD: ${{ secrets.IMMICH_DB_PASSWORD }}
+        run: |
+          chmod +x scripts/ensure_secret.sh
+          echo "IMMICH_DB_PASSWORD_NAME=$(echo "$IMMICH_DB_PASSWORD" | ./scripts/ensure_secret.sh immich_db_password)" >> $GITHUB_ENV
+
+      - name: Deploy Stack
+        env:
+          DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh "immich" docker-compose.yml
