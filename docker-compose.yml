@@ -71,11 +71,13 @@ services:
         - homepage.description=Photo & video backup
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:release
+    image: ghcr.io/immich-app/immich-machine-learning:release-cuda
     networks:
       - internal
     environment:
       - TZ=Pacific/Auckland
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
     labels:
       - "com.docker.compose.project=${STACK_NAME:-immich}"
     volumes:
