@@ -1,4 +1,4 @@
-# Immich — Self-Hosted Photo & Video Backup
+# Immich: Self-Hosted Photo & Video Backup
 
 Immich for Yggdrasil, deployed via Docker Swarm on the Muspelheim worker node. Backs up phone photos and videos with deduplication, search, and machine-learning tagging.
 
@@ -13,7 +13,7 @@ Immich for Yggdrasil, deployed via Docker Swarm on the Muspelheim worker node. B
 
 ## Deploy
 
-CI/CD runs via GitHub Actions on the gaia self-hosted runner. Push to main triggers deploy automatically. Services are pinned to `muspelheim` via placement constraints.
+CI/CD runs via GitHub Actions on the gaia self-hosted runner. Push to main triggers deploy automatically via centralized `yggdrasil-os` deployment scripts. Services are pinned to `muspelheim` via placement constraints.
 
 ## Secrets
 
@@ -25,16 +25,16 @@ Generate the value with `openssl rand -hex 32`. `DOMAIN_NAME` is reused from the
 
 ## Setup
 
-First-time host setup (run on muspelheim):
+First-time host setup is centrally managed via `yggdrasil-os` (run on Muspelheim):
 
-```
-./setup_host_muspelheim.sh
+```bash
+curl -fsSL https://raw.githubusercontent.com/yggdrasil-lab/yggdrasil-os/main/hosts/setup_muspelheim.sh | sudo bash
 ```
 
-This creates:
-- `/mnt/storage/immich/library` — photo/video library (mergerfs pool)
-- `/opt/immich/postgres` — database data (local disk)
-- `/opt/immich/model-cache` — ML model cache
+This provisions:
+- `/mnt/storage/immich/library` (photo/video library on mergerfs pool)
+- `/opt/immich/postgres` (database data on local disk)
+- `/opt/immich/model-cache` (ML model cache)
 
 After the first deploy, open the web UI at `https://photos.${DOMAIN_NAME}` and complete the setup wizard to create the admin account.
 
@@ -48,4 +48,4 @@ After the first deploy, open the web UI at `https://photos.${DOMAIN_NAME}` and c
 
 ## Documentation
 
-See the vault: `Areas/90-Infrastructure/Immich/Immich Stack.md`
+See the vault: `second-brain/Areas/90-Infrastructure/Immich/Immich Stack.md`
