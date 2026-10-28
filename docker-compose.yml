@@ -1,4 +1,4 @@
-# Immich — self-hosted photo & video backup
+# Immich: self-hosted photo & video backup
 # Deployed via Docker Swarm on the Muspelheim worker node.
 # Docs: https://immich.app/docs/install/docker-compose
 
@@ -33,7 +33,7 @@ services:
     secrets:
       - immich_db_password
     labels:
-      - "com.docker.compose.project=${STACK_NAME:-immich}"
+      - "com.docker.compose.project=${STACK_NAME}"
     volumes:
       - /mnt/storage/immich/library:/data
     healthcheck:
@@ -79,11 +79,15 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
     labels:
-      - "com.docker.compose.project=${STACK_NAME:-immich}"
+      - "com.docker.compose.project=${STACK_NAME}"
     volumes:
       - /opt/immich/model-cache:/cache
     healthcheck:
-      disable: false
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3003/ping', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     deploy:
       mode: replicated
       replicas: 1
@@ -95,6 +99,14 @@ services:
           memory: 3072M
         reservations:
           memory: 1024M
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        delay: 10s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
       restart_policy:
         condition: any
         delay: 5s
@@ -105,7 +117,7 @@ services:
     networks:
       - internal
     labels:
-      - "com.docker.compose.project=${STACK_NAME:-immich}"
+      - "com.docker.compose.project=${STACK_NAME}"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -139,7 +151,7 @@ services:
     secrets:
       - immich_db_password
     labels:
-      - "com.docker.compose.project=${STACK_NAME:-immich}"
+      - "com.docker.compose.project=${STACK_NAME}"
     volumes:
       - /opt/immich/postgres:/var/lib/postgresql/data
       - type: tmpfs

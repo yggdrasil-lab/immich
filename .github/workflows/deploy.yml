@@ -16,6 +16,10 @@ jobs:
         env:
           IMMICH_DB_PASSWORD: ${{ secrets.IMMICH_DB_PASSWORD }}
         run: |
+          if [ -z "${IMMICH_DB_PASSWORD}" ]; then
+            echo "Error: IMMICH_DB_PASSWORD secret is required" >&2
+            exit 1
+          fi
           curl -fsSL https://raw.githubusercontent.com/yggdrasil-lab/yggdrasil-os/main/deploy/ensure_secret.sh -o /tmp/ensure_secret.sh
           chmod +x /tmp/ensure_secret.sh
           echo "IMMICH_DB_PASSWORD_NAME=$(echo "$IMMICH_DB_PASSWORD" | /tmp/ensure_secret.sh immich_db_password)" >> $GITHUB_ENV
